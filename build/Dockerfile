@@ -1,4 +1,4 @@
-FROM golang:1.17 AS go_builder
+FROM goboring/golang:1.16.7b7 AS go_builder
 WORKDIR /go/src/github.com/percona/percona-server-mongodb-operator
 
 COPY . .
@@ -28,8 +28,20 @@ RUN find vendor -regextype posix-extended -iregex '.*(license|notice)(\.md|\.txt
             sh -c 'mkdir -pv /licenses/$(echo "$0" | sed -E "s/\/(license|notice).*$//gi") \
                    && cp -v "$0" /licenses/$(echo "$0" | sed -E "s/\/(license|notice).*$//gi")' {} \;
 
-FROM registry.access.redhat.com/ubi7/ubi-minimal AS ubi7
-RUN microdnf update && microdnf clean all
+FROM redhat/ubi8-minimal
+# Check https://access.redhat.com/errata/RHBA-2020:4536
+# and https://bugzilla.redhat.com/show_bug.cgi?id=1832743
+# for sources of enabling FIPS-140-2 support
+#
+# platform-python-pip is removed due to CVE-2019-20916, VULNDB-229216
+# python3-pip-wheel is required by platform-python
+RUN set -ex; \
+    microdnf update; \
+    microdnf -y install crypto-policies-scripts; \
+    microdnf -y remove platform-python-pip; \
+    microdnf clean all; \
+    rm -rf /var/cache/dnf /var/cache/yum; \
+    fips-mode-setup --enable
 
 LABEL name="Percona Server for MongoDB Operator" \
       vendor="Percona" \
