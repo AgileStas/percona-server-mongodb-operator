@@ -29,13 +29,14 @@ RUN find vendor -regextype posix-extended -iregex '.*(license|notice)(\.md|\.txt
                    && cp -v "$0" /licenses/$(echo "$0" | sed -E "s/\/(license|notice).*$//gi")' {} \;
 
 FROM registry.access.redhat.com/ubi7/ubi-minimal AS ubi7
+# sqlite, libsolv and libmodulemd are from the base system (needed by microdnf itself)
 #RUN microdnf update && microdnf install -y dracut-fips && microdnf clean all
 RUN microdnf update \
     && export GNUPGHOME="$(mktemp -d)" \
     && gpg --batch --keyserver keyserver.ubuntu.com --recv-keys 6341AB2753D78A78A7C27BB124C6A8A7F4A80EB5 \
     && gpg --batch --export --armor 6341AB2753D78A78A7C27BB124C6A8A7F4A80EB5 > ${GNUPGHOME}/RPM-GPG-KEY-CentOS-7 \
     && rpmkeys --import ${GNUPGHOME}/RPM-GPG-KEY-CentOS-7 \
-    && microdnf install -y dracut \
+    && microdnf -y install dracut \
     && curl -o /tmp/hmaccalc.rpm http://mirror.centos.org/centos/7/os/x86_64/Packages/hmaccalc-0.9.13-4.el7.x86_64.rpm \
     && curl -o /tmp/dracut-fips.rpm http://mirror.centos.org/centos/7/os/x86_64/Packages/dracut-fips-033-572.el7.x86_64.rpm \
     && rpmkeys --checksig /tmp/hmaccalc.rpm /tmp/dracut-fips.rpm \
